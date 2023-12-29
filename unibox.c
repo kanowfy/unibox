@@ -44,7 +44,7 @@ Cmd *parseCommand(char *buffer) {
     int count = 0;
     token = strtok(NULL, " ");
     while (token != NULL && count < MAX_ARG_COUNT) {
-        command->args[count++] = token;
+        command->args[count++] = strdup(token);
         token = strtok(NULL, " ");
     }
 
@@ -55,12 +55,45 @@ Cmd *parseCommand(char *buffer) {
     return command;
 }
 
+// sendPOP3Command constructs and sends an SMTP command
 void sendSMTPCommand(Cmd *command, int smtpSocket) {
-    send(smtpSocket, command->rawCmd, strlen(command->rawCmd), 0);
+    switch (command->commandType) {
+        case MAILFROM:
+            char fromBuffer[100];
+            //TODO: Handle insufficient arguments
+            sprintf(fromBuffer, "MAIL FROM: %s\r\n", command->args[0]);
+            send(smtpSocket, fromBuffer, strlen(fromBuffer), 0);
+            break;
+        case RCPTTO:
+            char toBuffer[100];
+            //TODO: Handle insufficient arguments
+            sprintf(toBuffer, "RCPT TO: %s\r\n", command->args[0]);
+            send(smtpSocket, toBuffer, strlen(toBuffer), 0);
+            break;
+        case DATA:
+            fprintf(stderr, "-ERR command not implemented");
+        default:
+            fprintf(stderr, "-ERR command not implemented");
+    }
 }
+
+// sendPOP3Command constructs and sends a POP3 command
 void sendPOP3Command(Cmd *command, int pop3Socket) {
+    switch (command->commandType) {
+        case USER:
+        case PASS:
+        case LIST:
+        case RETR:
+            send(pop3Socket, command->rawCmd, strlen(command->rawCmd), 0);
+            break;
+        case GETATTACH:
+        default:
+            fprintf(stderr, "-ERR command not implemented");
+    }
     send(pop3Socket, command->rawCmd, strlen(command->rawCmd), 0);
 }
+
+// sendAllCommand sends a common command to both servers, only QUIT is used for now
 void sendAllCommand(Cmd *command, int smtpSocket, int pop3Socket) {
     send(smtpSocket, command->rawCmd, strlen(command->rawCmd), 0);
     send(pop3Socket, command->rawCmd, strlen(command->rawCmd), 0);
