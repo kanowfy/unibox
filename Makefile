@@ -1,2 +1,2 @@
-unibox: main.c
-	gcc -O2 -Wall -o bin/unibox main.c unibox.c
+unibox: main.c unibox.c
+	gcc -O0 -g -Wall -lcrypto -lssl -o bin/unibox main.c unibox.c
