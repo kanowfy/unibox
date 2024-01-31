@@ -25,7 +25,6 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    // struct timeval tv;
     int smtpSocket, pop3Socket, maxSocket;
     struct sockaddr_in smtpServerAddr, pop3ServerAddr;
     fd_set fdSet;
@@ -58,9 +57,6 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    // tv.tv_sec = 10;
-    // tv.tv_usec = 500000;
-
     while (1) {
         // initialize file descriptor set;
         FD_ZERO(&fdSet);
@@ -86,7 +82,7 @@ int main(int argc, char **argv) {
                 else if (command->protocol == BOTH)
                     sendAllCommand(command, smtpSocket, pop3Socket);
                 else
-                    printf("-ERR unknown command\n");
+                    printf("-ERR unknown command.\r\n");
                 free(command);
             }
         }
@@ -94,14 +90,44 @@ int main(int argc, char **argv) {
         if (FD_ISSET(smtpSocket, &fdSet)) {
             recv(smtpSocket, smtpBuffer, MAXLINE, 0);
             // parse response
-            printf("%s", smtpBuffer);
-            memset(smtpBuffer, 0, MAXLINE);
+            char *ret = strtok(smtpBuffer, " ");
+            if (ret != NULL) {
+                int returnCode = atoi(ret);
+                switch (returnCode) {
+                case 220:
+                    fprintf(stdout, "+OK SMTP server ready.\r\n");
+                    break;
+                case 221:
+                    fprintf(stdout, "+OK Bye.\r\n");
+                    break;
+                case 250:
+                    fprintf(stdout, "+OK\r\n");
+                    break;
+                case 500:
+                case 501:
+                case 502:
+                case 503:
+                case 504:
+                    fprintf(stderr, "-ERR invalid command.\r\n");
+                    break;
+                case 550:
+                case 551:
+                    fprintf(stderr, "-ERR mailbox not found.\r\n");
+                    break;
+                default:
+                }
+
+                memset(smtpBuffer, 0, MAXLINE);
+            }
         }
 
         if (FD_ISSET(pop3Socket, &fdSet)) {
             recv(pop3Socket, pop3Buffer, MAXLINE, 0);
-            // parse response
-            printf("%s", pop3Buffer);
+            if (strstr(pop3Buffer, "Dovecot ready") != NULL) {
+                fprintf(stdout, "+OK POP3 server ready.\r\n");
+            } else {
+                fprintf(stdout, "%s", pop3Buffer);
+            }
             memset(pop3Buffer, 0, MAXLINE);
         }
     }

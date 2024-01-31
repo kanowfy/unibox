@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "attachment.h"
 
 #define MAXLINE 1024
 #define SMTP_PORT 25
